@@ -30,13 +30,16 @@ class FSM {
    * @param state
    */
   changeState(state) {
+    console.info('changeState', state);
 
     // check new state in this.config.states
     if (!this.config.states.hasOwnProperty(state)) {
       // show error
       throw new Error();
+      return false;
     } else {
-      return this._state = state;
+      this._state = state;
+      return true;
     }
   }
 
@@ -46,18 +49,20 @@ class FSM {
    */
   trigger(event) {
 
-    console.info('trigger', event);
-
     // get current transitions from config
     let currentTransitions = this.config.states[this._state].transitions;
 
-    if(currentTransitions.hasOwnProperty(event)) {
+    if (currentTransitions.hasOwnProperty(event)) {
       // change _state
-      this._state = currentTransitions[event];
+      this.changeState(currentTransitions[event]);
+      return true;
     } else {
       // show error
       throw new Error();
+      return false;
     }
+    this._eventTimeoutEnd = true;
+
   }
 
   /**
@@ -108,6 +113,27 @@ class FSM {
 
     if (this._state == this.config.initial) {
       this._undo = false;
+    } else {
+
+      // run loop
+      for (let state of statesArr) {
+
+        // check conditions
+        if (this._state == state) {
+
+          let undoStateName = statesArr[count - 1];
+
+          this.changeState(undoStateName);
+
+          // change undo state
+          if (undoStateName == this.config.initial) {
+            this._undo = false;
+          } else {
+            this._undo = true;
+          }
+        }
+        count++;
+      }
     }
 
     return this._undo;
@@ -119,6 +145,15 @@ class FSM {
    * @returns {Boolean}
    */
   redo() {
+
+    let statesArr = this.getStates();
+
+    if (this._state == statesArr[statesArr.length - 1]) {
+      this._redo = false;
+    } else {
+      console.info('redo else');
+    }
+
     return this._redo;
   }
 
@@ -128,8 +163,10 @@ class FSM {
   clearHistory() {
     this._undo = false;
     this._redo = false;
+    this._state = this.config.initial;
   }
 }
+
 
 module.exports = FSM;
 
