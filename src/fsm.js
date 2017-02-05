@@ -62,23 +62,19 @@ class FSM {
     if (!this.config.states.hasOwnProperty(state)) {
       // show error
       throw new Error();
+      return false;
     } else {
 
+      // set new state
       this._state = state;
 
       // change undo state
-      if (this._nagigation[this._state].prev == null) {
-        this._undo = false;
-      } else {
-        this._undo = true;
-      }
+      this._undo = this._nagigation[this._state].prev == null ? false : true;
 
       // change redo state
-      if (this._nagigation[this._state].next == null) {
-        this._redo = false;
-      } else {
-        this._redo = true;
-      }
+      this._redo = this._nagigation[this._state].next == null ? false : true;
+
+      return true;
     }
   }
 
@@ -142,11 +138,14 @@ class FSM {
    */
   undo() {
 
-    if (this._undo ) {
-      this.changeState(this._nagigation[this._state].prev);
+    let transition = false;
+
+    // move to prev state
+    if (this._undo) {
+      transition = this.changeState(this._nagigation[this._state].prev);
     }
 
-    return this._undo;
+    return transition;
   }
 
   /**
@@ -156,6 +155,7 @@ class FSM {
    */
   redo() {
 
+    // move to next state
     if (this._redo) {
       this.changeState(this._nagigation[this._state].next);
     }
