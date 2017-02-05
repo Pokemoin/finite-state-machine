@@ -10,6 +10,33 @@ class FSM {
       this._state = config.initial;
       this._undo = false;
       this._redo = false;
+      this._nagigation = (function () {
+
+        let obj = {},
+            statesArr = Object.keys(config.states),
+            length = statesArr.length - 1;
+
+        statesArr.forEach(function (item, index) {
+          if (index == 0) {
+            obj[item] = {
+              prev: null,
+              next: statesArr[index + 1]
+            }
+          } else if (index > 0 && index < length) {
+            obj[item] = {
+              prev: statesArr[index - 1],
+              next: statesArr[index + 1]
+            }
+          } else {
+            obj[item] = {
+              prev: statesArr[index - 1],
+              next: null
+            }
+          }
+        });
+
+        return obj;
+      })();
 
     } else {
       // show error
@@ -30,16 +57,28 @@ class FSM {
    * @param state
    */
   changeState(state) {
-    console.info('changeState', state);
 
     // check new state in this.config.states
     if (!this.config.states.hasOwnProperty(state)) {
       // show error
       throw new Error();
-      return false;
     } else {
+
       this._state = state;
-      return true;
+
+      // change undo state
+      if (this._nagigation[this._state].prev == null) {
+        this._undo = false;
+      } else {
+        this._undo = true;
+      }
+
+      // change redo state
+      if (this._nagigation[this._state].next == null) {
+        this._redo = false;
+      } else {
+        this._redo = true;
+      }
     }
   }
 
@@ -48,21 +87,16 @@ class FSM {
    * @param event
    */
   trigger(event) {
-
     // get current transitions from config
     let currentTransitions = this.config.states[this._state].transitions;
 
     if (currentTransitions.hasOwnProperty(event)) {
       // change _state
       this.changeState(currentTransitions[event]);
-      return true;
     } else {
       // show error
       throw new Error();
-      return false;
     }
-    this._eventTimeoutEnd = true;
-
   }
 
   /**
@@ -108,32 +142,8 @@ class FSM {
    */
   undo() {
 
-    let statesArr = this.getStates(),
-        count = 0;
-
-    if (this._state == this.config.initial) {
-      this._undo = false;
-    } else {
-
-      // run loop
-      for (let state of statesArr) {
-
-        // check conditions
-        if (this._state == state) {
-
-          let undoStateName = statesArr[count - 1];
-
-          this.changeState(undoStateName);
-
-          // change undo state
-          if (undoStateName == this.config.initial) {
-            this._undo = false;
-          } else {
-            this._undo = true;
-          }
-        }
-        count++;
-      }
+    if (this._undo ) {
+      this.changeState(this._nagigation[this._state].prev);
     }
 
     return this._undo;
@@ -146,12 +156,8 @@ class FSM {
    */
   redo() {
 
-    let statesArr = this.getStates();
-
-    if (this._state == statesArr[statesArr.length - 1]) {
-      this._redo = false;
-    } else {
-      console.info('redo else');
+    if (this._redo) {
+      this.changeState(this._nagigation[this._state].next);
     }
 
     return this._redo;
